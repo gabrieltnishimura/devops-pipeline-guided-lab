@@ -47,18 +47,34 @@ jobs:
 # TODO: Part 2 
 # - Create a job for deploying the project to DockerHub.
 # - Create a job for deploying the project to Render only if the DockerHub deploy is successful.
-  deploy-to-docker:
-    needs: test
+    deploy-to-docker:
+      needs: test
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v5
+        - name: Log in to DockerHub
+          uses: docker/login-action@v3
+          with:
+            username: ${{ secrets.DOCKER_HUB_USERNAME }}
+            password: ${{ secrets.DOCKER_HUB_TOKEN }}
+        - name: Build and Push Docker Image
+          uses: docker/build-push-action@v5
+          with:
+            context: .
+            push: true
+            tags: ${{ vars.DOCKER_HUB_IMAGE_PATH }}:latest
+
+  deploy-to-render:
+    needs: deploy-to-docker
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/al/')
     runs-on: ubuntu-latest
     steps:
-      - name: Log in to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: gabrieltnishimura/devops-pipeline-guided-lab:latest
+      - name: Deploy to Render
+        run: |
+          curl --location 'https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys' \
+          --header "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+          --header 'Content-Type: application/json' \
+          --data '{"image": { "ref": "latest" } }'
+
+
+
