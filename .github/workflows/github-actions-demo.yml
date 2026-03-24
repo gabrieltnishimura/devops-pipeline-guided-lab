@@ -2,12 +2,27 @@ name: Pipeline Demo
 on:
   push:
     branches:
-      - "**" # Matches all branches
+      - "**"
 
 jobs:
-  hello-job:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Say hello
-        run: echo "🎉 GitHub Actions is running!"
- 
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
